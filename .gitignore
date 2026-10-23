@@ -1,0 +1,28 @@
+# Java / Spring Boot
+backend/target/
+backend/build/
+*.class
+*.jar
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Node / frontend tooling
+node_modules/
+
+# Secrets and local config (never commit these)
+.env
+*.env
+application-local.properties
+
+# IDE and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

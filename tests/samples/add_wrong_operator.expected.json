@@ -1,0 +1,12 @@
+{
+  "score_max": 80,
+  "issues": [
+    {
+      "line": 1,
+      "severity": "high",
+      "title": "Wrong operator",
+      "explanation": "The function is named add but subtracts.",
+      "fix": "return a + b"
+    }
+  ]
+}
