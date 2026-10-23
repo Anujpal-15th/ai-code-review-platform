@@ -6,7 +6,7 @@ A web platform where a developer pastes code and an AI reviews it. The platform 
 
 | Member | Role | Folder |
 | --- | --- | --- |
-| [Your Name] | Team Leader, Backend, AI integration | `backend/` |
+| Anuj | Team Leader, Backend, AI integration | `backend/` |
 | Aryan | Analysis service (Python) | `analysis/` |
 | Abhi | Input page (frontend) | `frontend/` |
 | Rudra | Report page (frontend) | `frontend/` |
