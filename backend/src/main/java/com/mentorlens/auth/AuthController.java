@@ -1,0 +1,76 @@
+package com.mentorlens.auth;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Map;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+
+@RestController
+@RequestMapping("/api/auth")
+class AuthController {
+
+    record Credentials(@NotBlank @Email String email, @NotBlank @Size(min = 8, max = 72) String password) {}
+
+    private final UserRepository users;
+    private final JwtEncoder encoder;
+    private final PasswordEncoder hasher = new BCryptPasswordEncoder();
+    // checked when the email is unknown, so both login failures cost the same time
+    private final String dummyHash = hasher.encode("not-a-real-password");
+
+    AuthController(UserRepository users, JwtEncoder encoder) {
+        this.users = users;
+        this.encoder = encoder;
+    }
+
+    @PostMapping("/register")
+    Map<String, String> register(@Valid @RequestBody Credentials c) {
+        if (c.password().getBytes(StandardCharsets.UTF_8).length > 72) { // BCrypt limit is bytes
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "password is too long");
+        }
+        String email = normalize(c.email());
+        if (users.findByEmail(email).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already registered");
+        }
+        User u = users.saveAndFlush(new User(email, hasher.encode(c.password())));
+        return Map.of("token", token(u));
+    }
+
+    @PostMapping("/login")
+    Map<String, String> login(@Valid @RequestBody Credentials c) {
+        User u = users.findByEmail(normalize(c.email())).orElse(null);
+        boolean ok = hasher.matches(c.password(), u == null ? dummyHash : u.passwordHash);
+        if (u == null || !ok) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+        }
+        return Map.of("token", token(u));
+    }
+
+    private static String normalize(String email) {
+        return email.trim().toLowerCase();
+    }
+
+    private String token(User u) {
+        Instant now = Instant.now();
+        JwtClaimsSet claims = JwtClaimsSet.builder().subject(u.getId().toString())
+            .issuedAt(now).expiresAt(now.plus(12, ChronoUnit.HOURS)).build();
+        return encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
+            .getTokenValue();
+    }
+}
