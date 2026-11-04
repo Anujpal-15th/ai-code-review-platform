@@ -30,5 +30,10 @@ public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
         + " and o.user.id = (select s.user.id from Submission s where s.id = :id)")
     long countAiUsesBySameStudent(UUID id, Instant since);
 
+    /** One atomic step up; the row lock also makes concurrent callers take turns. Stops at the last level. */
+    @Modifying(clearAutomatically = true) @Transactional
+    @Query("update Submission s set s.hintLevel = s.hintLevel + 1 where s.id = :id and s.hintLevel < :max")
+    int nextHintLevel(UUID id, int max);
+
     List<Submission> findByStatusInOrderByCreatedAtAsc(Collection<SubmissionStatus> statuses);
 }
