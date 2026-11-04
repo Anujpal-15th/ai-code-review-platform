@@ -4,7 +4,7 @@
 
 MentorLens helps students who are stuck on LeetCode or HackerRank-style coding questions. Paste your question, your code and the failing test. MentorLens really runs the code, shows it step by step next to a correct version, and stops at the first step where the two differ.
 
-> **Status: planning and setup.** No application code exists yet. This README describes what we are building, not what works today. See the [roadmap](#roadmap).
+> **Status: backend built; runner and frontend pending.** The Spring Boot backend exists in `backend/`. The runner and the web app are not built yet, so there is no complete product to use. This README describes what we are building, not only what works today. See the [roadmap](#roadmap).
 
 ## The problem
 
@@ -113,7 +113,7 @@ ai-code-review-platform/
 
 ## Getting started
 
-There is nothing to run yet. Each folder's README lists its setup steps and what its owner builds first:
+Only the backend can run today, and it needs the runner for real results. Each folder's README lists its setup steps:
 
 - [backend](backend/README.md)
 - [runner](runner/README.md)
