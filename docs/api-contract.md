@@ -103,6 +103,8 @@ Returns HTTP 404 with `{ "error": "message" }` when the submission does not exis
 
 ### Get progress
 
+**Not built yet (Task 15).** The format below is the agreed plan.
+
 `GET /api/students/me/progress`
 
 ```json
@@ -119,7 +121,8 @@ Returns HTTP 404 with `{ "error": "message" }` when the submission does not exis
 | Case | Response |
 | --- | --- |
 | Invalid input, such as empty code, an unknown language, a NUL character in a text field, or a malformed body | HTTP 400 with `{ "error": "message" }` |
-| No token, or an invalid one, or a token for a user that no longer exists | HTTP 401 with `{ "error": "message" }` |
+| No token, or an invalid one | HTTP 401 with `{ "error": "message" }` |
+| Valid token for a user that does not exist | `POST /api/submissions`: HTTP 401 with `{ "error": "message" }`. `GET` on a submission or its hints: HTTP 404 with `{ "error": "message" }` |
 | Submission id does not exist or belongs to another student | HTTP 404 with `{ "error": "message" }` |
 | Wrong HTTP method | HTTP 405 with `{ "error": "message" }` |
 | Request body over 256 KB | HTTP 413 with `{ "error": "message" }` |
@@ -173,6 +176,6 @@ Response:
 
 `event` is one of `call`, `line`, `return`.
 
-Every step's `line` is always an integer. A reply that breaks this cannot be parsed, and the submission ends as `FAILED`.
+Every step's `line` must be sent as an integer. A reply with a missing, null or non-numeric `line` cannot be parsed, and the submission ends as `FAILED`.
 
 `variables` must not include `self` or memory addresses (such as `<Foo object at 0x7f...>`). They differ between runs and would show up as false differences.

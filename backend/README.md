@@ -28,7 +28,7 @@ Optional variables:
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Comma-separated exact origins allowed to call the API. A wildcard stops startup. |
 | `ALLOWED_EMAIL_DOMAIN` | none | When set, only emails at exactly this domain can register. When unset, registration is open. |
 
-Limits on `/api/auth/**` are per IP, in memory, and for one instance. Behind a proxy, set `server.forward-headers-strategy` so the limit sees real client addresses.
+Limits on `/api/auth/**` are per IP, in memory, and for one instance. Behind a trusted proxy, set `server.forward-headers-strategy=native` so the limit sees real client addresses. Do not use `framework`, and do not set this without a trusted proxy in front: clients could then fake their address.
 
 ## Pilot groups
 Assign pilot groups with `scripts/set-pilot-group.sql` before students start. The group is applied when a submission is processed, so results that already exist do not change and a student moved later will have seen both kinds of feedback.

@@ -39,7 +39,10 @@ class AuthRateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest req) {
-        return !req.getRequestURI().startsWith("/api/auth/");
+        // the decoded path, as routing sees it: the raw URI would let /%61pi/auth/login through.
+        // pathInfo is null under Tomcat's "/" mapping; MockMvc puts the whole path there.
+        String pathInfo = req.getPathInfo();
+        return !(req.getServletPath() + (pathInfo == null ? "" : pathInfo)).startsWith("/api/auth/");
     }
 
     @Override

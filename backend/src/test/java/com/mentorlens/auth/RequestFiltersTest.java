@@ -63,7 +63,9 @@ class RequestFiltersTest {
 
     private static int login(AuthRateLimitFilter f) throws Exception {
         var res = new MockHttpServletResponse();
-        f.doFilter(new MockHttpServletRequest("POST", "/api/auth/login"), res, new MockFilterChain());
+        var req = new MockHttpServletRequest("POST", "/api/auth/login");
+        req.setServletPath("/api/auth/login");
+        f.doFilter(req, res, new MockFilterChain());
         return res.getStatus();
     }
 }
