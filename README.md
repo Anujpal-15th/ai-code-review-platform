@@ -73,16 +73,23 @@ More detail: [architecture](docs/architecture.md) and [API contract](docs/api-co
 
 ## Tech stack
 
-| Part | Technology |
-| --- | --- |
-| Frontend | HTML, CSS, JavaScript and Monaco Editor |
-| Backend | Java 17+ and Spring Boot |
-| Runner | Python 3.10+, FastAPI and `sys.settrace` |
-| Sandbox | Docker with no network, plus time and memory limits |
-| Database | PostgreSQL |
-| AI | Hosted model API, with the key kept on the server |
+| Part | Technology | What it does |
+| --- | --- | --- |
+| Frontend | HTML, CSS, JavaScript and Monaco Editor | The pages students use: code editor, side-by-side replay, hints and dashboard |
+| Backend | Java 17+ and Spring Boot | Coordinates each submission: checks input, calls the runner and AI, finds the first difference, calculates the score |
+| Runner | Python 3.10+ and FastAPI | Adds the hidden parts (main function, imports, input conversion) and runs the code |
+| Step recording | Python's `sys.settrace` | Saves each line and its variable values, which the visualization is drawn from |
+| Sandbox | Docker | Runs untrusted code in a throwaway container with no network, plus time and memory limits |
+| Database | PostgreSQL | Stores submissions, results, hints and progress |
+| AI | Hosted model API (provider not chosen yet) | Writes the correct version, explanation, hints and complexity estimate; the key stays on the server |
 
 Python is the first supported language for submitted code.
+
+### Why these choices
+
+- **Separate runner:** student code stays away from the main server, so a crash or endless loop can't take the backend down.
+- **Real execution for the steps:** an AI can guess a run that looks right but is false, so the AI never decides what the code did.
+- **No framework on the frontend:** plain JavaScript keeps the setup simple, and Monaco gives students a familiar editor.
 
 ## Repository structure
 
