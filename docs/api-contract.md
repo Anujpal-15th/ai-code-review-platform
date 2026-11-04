@@ -46,6 +46,7 @@ Response: HTTP 202
 {
   "status": "DONE",
   "queuePosition": 0,
+  "error": null,
   "result": {
     "outcome": "NORMAL",
     "passed": false,
@@ -70,13 +71,13 @@ Response: HTTP 202
 Field rules:
 - `language` is `python` for now.
 - `status` is one of `QUEUED`, `RUNNING`, `DONE`, `FAILED`. `result` is `null` until `DONE`. `queuePosition` is `0` once it is no longer waiting.
+- `error` is `null` unless `status` is `FAILED`, when it is a message string.
 - `outcome` is one of `NORMAL`, `EXCEPTION`, `TIMED_OUT`, `TRUNCATED`, `UNSUPPORTED`. `UNSUPPORTED` means the question type is not supported yet.
 - `score` is a code quality score, a whole number from 0 to 100, or `null` when no checked AI reply is available. It is a guide, not a grade.
 - `line` is the line number in the submitted code.
 - `correctTrace` and `firstDifference` are `null` when no tested correct version is available or the two runs can't be matched.
 - `explanation` is `null` when the AI is unavailable or its reply is not usable.
 - The correct version is never included in this response.
-- There are no dates in any request or response.
 
 ### Get the next hint
 
@@ -106,7 +107,10 @@ Levels: 1 nudge, 2 pointer, 3 guided fix, 4 correct version. `correctCode` is on
 | Case | Response |
 | --- | --- |
 | Invalid input, such as empty code or an unknown language | HTTP 400 with `{ "error": "message" }` |
-| The AI or runner service failed | HTTP 502 with `{ "error": "message" }` |
+| No token, or an invalid one | HTTP 401 with `{ "error": "message" }` |
+| Submission id does not exist or belongs to another student | HTTP 404 with `{ "error": "message" }` |
+| The runner failed while processing | The check call returns `status` `FAILED` with `error` set. Not an HTTP error. |
+| Only the AI failed | The real result and trace, with `explanation` set to `null` |
 
 The student's code crashing or timing out is **not** an API error. It returns normally with `outcome` set to `EXCEPTION` or `TIMED_OUT`.
 

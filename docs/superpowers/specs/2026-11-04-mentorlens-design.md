@@ -1,8 +1,6 @@
 # MentorLens Design
 
-Status: awaiting approval. Items marked **(my call)** were proposed by Claude. Anuj accepted the recommendations for scoring, supported questions, alpha scope, server and budget, and the failing test, team roles, hints-first order and removing Pylint and Bandit. The remaining marks are for Anuj to check.
-
-`docs/api-contract.md` and `docs/architecture.md` still show the older score and a single-request submission. Update them to match this document.
+Status: approved. Items marked **(my call)** were proposed by Claude and accepted.
 
 ## Intent
 
@@ -101,7 +99,7 @@ The score is a code quality score out of 100: `Q = max(0, 100 - sum(weight x cou
 | AI reply invalid | One retry, then the real run with no AI explanation |
 | AI service down | The real run and a clear message |
 | Correct version fails the test | No comparison, and no correct version shown |
-| Runner down | HTTP 502 with a clear message |
+| Runner down | The submission ends with `status` `FAILED` and a clear message |
 
 ## How it is built (existing team decisions)
 

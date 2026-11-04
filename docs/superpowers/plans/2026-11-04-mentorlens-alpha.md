@@ -52,7 +52,7 @@
 
 - [ ] **Step 1:** Update the contract to Shared contracts above, nullable `score`, and `UNSUPPORTED`.
 - [ ] **Step 2:** Replace the architecture's score with the spec's `Q` formula, and remove AI-written test rules. Remove AI-written tests from the README.
-- [ ] **Step 3:** Run `git grep -n "p / N\|AI-written"`. Expected: matches only in the spec's non-goal lines and this plan.
+- [ ] **Step 3:** Run `git grep -n "p / N\|AI-written"`. Expected: matches only in the spec and this plan.
 - [ ] **Step 4:** Commit: `docs: add MentorLens design and alpha plan`.
 
 ### Task 2: Parse pasted tests and build the driver
