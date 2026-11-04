@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.mentorlens.ai.AiClient;
 import com.mentorlens.ai.AiFeedback;
+import com.mentorlens.auth.PilotGroup;
 import com.mentorlens.auth.User;
 import com.mentorlens.auth.UserRepository;
 import com.mentorlens.compare.Step;
@@ -195,6 +196,71 @@ class SubmissionPipelineTest {
         assertThat(r.get("hint").get("level").asInt()).isEqualTo(1);
         assertThat(r.get("hint").get("text").asString()).isEqualTo("hint one");
         assertThat(r.has("noCheckedExplanation")).isFalse();
+    }
+
+    private void explanationOnlyStudent() {
+        user.setPilotGroup(PilotGroup.EXPLANATION_ONLY);
+        user = users.save(user);
+    }
+
+    @Test
+    void explanationOnlyUserGetsNullCorrectTrace() {
+        explanationOnlyStudent();
+        studentFailsAndAiReplies();
+        when(runner.run(CORRECT, IN)).thenReturn(run("NORMAL", "[1,2]", steps(0)));
+
+        JsonNode r = result(process("[1,2]"));
+
+        assertThat(r.has("correctTrace")).isTrue();
+        assertThat(r.get("correctTrace").isNull()).isTrue();
+        assertThat(r.has("firstDifference")).isTrue();
+        assertThat(r.get("firstDifference").isNull()).isTrue();
+    }
+
+    @Test
+    void explanationOnlyUserStillGetsExplanation() {
+        explanationOnlyStudent();
+        studentFailsAndAiReplies();
+        when(runner.run(CORRECT, IN)).thenReturn(run("NORMAL", "[1,2]", steps(0)));
+
+        Submission s = process("[1,2]");
+        JsonNode r = result(s);
+
+        assertThat(r.get("studentTrace")).hasSize(2);
+        assertThat(r.get("explanation").get("what").asString()).isEqualTo("w");
+        assertThat(r.get("mistakeType").asString()).isEqualTo("wrong-pointer-moved");
+        assertThat(r.get("complexity").get("time").asString()).isEqualTo("O(n)");
+        assertThat(r.get("score").asInt()).isEqualTo(80);
+        assertThat(r.get("hint").get("text").asString()).isEqualTo("hint one");
+        assertThat(r.has("noCheckedExplanation")).isFalse();
+        // hints and level 4 correct code are unchanged
+        assertThat(s.correctCode).isEqualTo(CORRECT);
+        assertThat(s.hintLevel).isEqualTo(1);
+        assertThat(M.readTree(s.hintsJson)).hasSize(3);
+    }
+
+    @Test
+    void explanationOnlyUserStillHasCorrectVersionChecked() {
+        explanationOnlyStudent();
+        studentFailsAndAiReplies();
+        when(runner.run(CORRECT, IN)).thenReturn(run("NORMAL", "[9]", steps(0)));
+
+        Submission s = process("[1,2]");
+
+        verify(runner).run(CORRECT, IN);
+        assertNoAiFields(result(s));
+        assertThat(result(s).get("noCheckedExplanation").asBoolean()).isTrue();
+        assertNothingStored(s);
+    }
+
+    @Test
+    void stepBasedAndUnsetUsersKeepCorrectTrace() {
+        user.setPilotGroup(PilotGroup.STEP_BASED);
+        user = users.save(user);
+        studentFailsAndAiReplies();
+        when(runner.run(CORRECT, IN)).thenReturn(run("NORMAL", "[1,2]", steps(0)));
+
+        assertThat(result(process("[1,2]")).get("correctTrace").isNull()).isFalse();
     }
 
     @Test

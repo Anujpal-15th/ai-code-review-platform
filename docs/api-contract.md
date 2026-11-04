@@ -8,7 +8,9 @@ This is the agreed data format. Do not change it without telling the whole team.
 
 `POST /api/auth/register` and `POST /api/auth/login`
 
-Request (both): `{ "email": "a@b.com", "password": "..." }`
+Request (login): `{ "email": "a@b.com", "password": "..." }`
+
+Request (register): `{ "email": "a@b.com", "password": "...", "consent": true }`. `consent` must be `true` (the student agreed to the pilot terms). If it is missing or `false`, the response is HTTP 400 with `{ "error": "message" }` and no account is created.
 
 Response (both): `{ "token": "..." }`. Send it on later calls as `Authorization: Bearer <token>`.
 
@@ -77,6 +79,7 @@ Field rules:
 - `score` is a code quality score, a whole number from 0 to 100, or `null` when no checked AI reply is available. It is a guide, not a grade.
 - `line` is the line number in the submitted code.
 - `correctTrace` is `null` when no tested correct version is available. `firstDifference` is `null` in that case, and also when the runs can't be aligned or no difference was found.
+- Pilot: for students in the explanation-only group, `correctTrace` and `firstDifference` are always `null`, even when a tested correct version exists. Everything else (the student's own trace, `explanation`, `score`, hints, and the level 4 correct code) is unchanged. The page must treat these two as "not shown" and must not infer from them that no checked explanation is available. The group is set by admins and is not exposed by any API.
 - `result.error` is the error message from the real run of the student's code, such as a crash message, or `null` if there was none. It is separate from the top-level `error`.
 - `explanation` is `null` when the AI is unavailable or its reply is not usable.
 - `noCheckedExplanation` is an extra boolean, present and `true` only when the AI replied but its correct version failed the test. All AI fields are then `null`, and the page should say no checked explanation is available. It is left out otherwise.

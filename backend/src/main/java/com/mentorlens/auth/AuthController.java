@@ -28,7 +28,8 @@ import org.springframework.web.server.ResponseStatusException;
 class AuthController {
 
     record Credentials(@NotBlank @Email @Size(max = 254) String email,
-                       @NotBlank @Size(min = 8, max = 72) String password) {}
+                       @NotBlank @Size(min = 8, max = 72) String password,
+                       Boolean consent) {}
 
     // login must not apply registration password rules
     record Login(@NotBlank @Size(max = 254) String email, @NotBlank String password) {}
@@ -46,6 +47,9 @@ class AuthController {
 
     @PostMapping("/register")
     Map<String, String> register(@Valid @RequestBody Credentials c) {
+        if (!Boolean.TRUE.equals(c.consent())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "consent is required");
+        }
         if (c.password().getBytes(StandardCharsets.UTF_8).length > 72) { // BCrypt limit is bytes
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "password is too long");
         }
@@ -53,9 +57,10 @@ class AuthController {
         if (users.findByEmail(email).isPresent()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already registered");
         }
-        User u;
+        User u = new User(email, hasher.encode(c.password()));
+        u.setConsentedAt(Instant.now());
         try {
-            u = users.saveAndFlush(new User(email, hasher.encode(c.password())));
+            u = users.saveAndFlush(u);
         } catch (DataIntegrityViolationException e) { // concurrent duplicate hits the unique constraint
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already registered");
         }

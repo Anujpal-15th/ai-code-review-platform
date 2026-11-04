@@ -20,7 +20,28 @@ class AuthApiTest {
 
     ResultActions call(String path, String email, String pw) throws Exception {
         return mvc.perform(post("/api/auth/" + path).contentType(MediaType.APPLICATION_JSON)
-            .content("{\"email\":\"" + email + "\",\"password\":\"" + pw + "\"}"));
+            .content("{\"email\":\"" + email + "\",\"password\":\"" + pw + "\",\"consent\":true}"));
+    }
+
+    ResultActions register(String body) throws Exception {
+        return mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    @Test
+    void registerRequiresConsent() throws Exception {
+        register("{\"email\":\"c1@x.com\",\"password\":\"password123\"}")
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").exists());
+        register("{\"email\":\"c1@x.com\",\"password\":\"password123\",\"consent\":false}")
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").exists());
+        // the refused attempts did not create the account
+        call("register", "c1@x.com", "password123").andExpect(status().isOk());
+    }
+
+    @Test
+    void loginNeedsNoConsent() throws Exception {
+        call("register", "c2@x.com", "password123").andExpect(status().isOk());
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+            .content("{\"email\":\"c2@x.com\",\"password\":\"password123\"}")).andExpect(status().isOk());
     }
 
     @Test
