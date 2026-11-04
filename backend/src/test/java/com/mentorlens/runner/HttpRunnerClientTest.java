@@ -60,6 +60,13 @@ class HttpRunnerClientTest {
     }
 
     @Test
+    void unknownOutcomeThrows() {
+        server.expect(requestTo("http://runner:8000/run"))
+                .andRespond(withSuccess("{\"outcome\":\"WEIRD\"}", MediaType.APPLICATION_JSON));
+        assertThatThrownBy(() -> client.run("c", "i")).isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
     void replyWithoutOutcomeThrows() {
         server.expect(requestTo("http://runner:8000/run"))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));

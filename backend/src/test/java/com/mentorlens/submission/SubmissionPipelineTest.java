@@ -1,6 +1,7 @@
 package com.mentorlens.submission;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -109,6 +110,7 @@ class SubmissionPipelineTest {
 
         assertThat(s.getStatus()).isEqualTo(SubmissionStatus.DONE);
         assertThat(result(s).get("passed").asBoolean()).isTrue();
+        assertThat(result(s).get("error").isNull()).isTrue();
         assertThat(result(s).get("studentTrace")).hasSize(2);
         assertNoAiFields(result(s));
         assertThat(s.aiUsedAt).isNull();
@@ -129,6 +131,36 @@ class SubmissionPipelineTest {
         Submission s = process("abc def");
         assertThat(result(s).get("passed").asBoolean()).isTrue();
         assertThat(result(s).get("expectedOutput").asString()).isEqualTo("abc def");
+    }
+
+    private boolean passes(String output, String expected) {
+        when(runner.run(STUDENT, IN)).thenReturn(run("NORMAL", output, steps(0)));
+        when(ai.review(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
+        return result(process(expected)).get("passed").asBoolean();
+    }
+
+    @Test
+    void pythonStyleExpectedMatches() {
+        assertThat(passes("true", "True")).isTrue();
+        assertThat(passes("false", "False")).isTrue();
+        assertThat(passes("null", "None")).isTrue();
+        assertThat(passes("[\"a\",\"b\"]", "['a','b']")).isTrue();
+        assertThat(passes("{\"a\":null,\"b\":[true]}", "{'a': None, 'b': [True]}")).isTrue();
+    }
+
+    @Test
+    void pythonWordsInsideStringsAreLeftAlone() {
+        assertThat(passes("[\"True\"]", "['True']")).isTrue();
+        assertThat(passes("\"None\"", "\"None\"")).isTrue();
+        assertThat(passes("[true]", "['True']")).isFalse();
+    }
+
+    @Test
+    void otherTextStaysPlainString() {
+        assertThat(passes("1", "1 apple")).isFalse();
+        assertThat(passes("true", "True story")).isFalse();
+        assertThat(passes("\"True story\"", "True story")).isTrue();
+        assertThat(passes("\"it's\"", "it's")).isTrue();
     }
 
     @Test
@@ -254,6 +286,7 @@ class SubmissionPipelineTest {
         assertThat(result(s).get("outcome").asString()).isEqualTo("EXCEPTION");
         assertThat(result(s).get("passed").asBoolean()).isFalse();
         assertThat(result(s).get("actualOutput").isNull()).isTrue();
+        assertThat(result(s).get("error").asString()).isEqualTo("boom");
     }
 
     @Test
@@ -336,6 +369,18 @@ class SubmissionPipelineTest {
         Submission done = awaitFinished(s.getId());
         assertThat(done.getStatus()).isEqualTo(SubmissionStatus.FAILED);
         assertThat(done.error).contains("runner").doesNotContain("secret-host");
+    }
+
+    @Test
+    void runnerFailureKeepsCauseButCleanMessage() {
+        IllegalStateException cause = new IllegalStateException("connection refused to secret-host");
+        when(runner.run(STUDENT, IN)).thenThrow(cause);
+        Submission s = submit("[1,2]");
+
+        assertThatThrownBy(() -> pipeline.process(s.getId()))
+                .isInstanceOf(PipelineException.class)
+                .hasCause(cause)
+                .message().doesNotContain("secret-host");
     }
 
     @Test

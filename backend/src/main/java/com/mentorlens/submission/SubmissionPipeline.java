@@ -10,8 +10,11 @@ import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
+import tools.jackson.core.json.JsonReadFeature;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -22,9 +25,13 @@ import tools.jackson.databind.node.ObjectNode;
 public class SubmissionPipeline {
     static final int DAILY_AI_LIMIT = 20;
     private static final String RUNNER_DOWN = "The code runner is unavailable right now. Please try again later.";
-    // without this, "1 apple" would parse as the number 1
+    // trailing tokens: without this, "1 apple" would parse as the number 1. Single quotes: Python-style expected text.
     private static final JsonMapper MAPPER = JsonMapper.builder()
-            .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).build();
+            .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES).build();
+    // matches quoted strings first, so a True inside a string is left alone
+    private static final Pattern PYTHON_WORDS = Pattern.compile(
+            "'(?:\\\\.|[^'\\\\])*'|\"(?:\\\\.|[^\"\\\\])*\"|\\b(True|False|None)\\b");
 
     private final SubmissionRepository submissions;
     private final RunnerClient runner;
@@ -72,7 +79,7 @@ public class SubmissionPipeline {
         try {
             return runner.run(code, input);
         } catch (RuntimeException e) {
-            throw new PipelineException(RUNNER_DOWN);
+            throw new PipelineException(RUNNER_DOWN, e);
         }
     }
 
@@ -83,11 +90,20 @@ public class SubmissionPipeline {
 
     private static JsonNode parseExpected(String text) {
         try {
-            JsonNode node = MAPPER.readTree(text);
+            JsonNode node = MAPPER.readTree(fromPython(text));
             return node.isMissingNode() ? MAPPER.getNodeFactory().stringNode(text) : node;
         } catch (JacksonException e) {
             return MAPPER.getNodeFactory().stringNode(text);
         }
+    }
+
+    private static String fromPython(String text) {
+        return PYTHON_WORDS.matcher(text).replaceAll(m -> Matcher.quoteReplacement(switch (String.valueOf(m.group(1))) {
+            case "True" -> "true";
+            case "False" -> "false";
+            case "None" -> "null";
+            default -> m.group();
+        }));
     }
 
     private static boolean isCorrect(RunResult run, JsonNode expected) {
@@ -98,6 +114,7 @@ public class SubmissionPipeline {
     private static ObjectNode realRun(RunResult run, boolean passed, JsonNode expected) {
         ObjectNode r = MAPPER.createObjectNode();
         r.put("outcome", run.outcome());
+        r.put("error", run.error());
         r.put("passed", passed);
         r.set("actualOutput", MAPPER.valueToTree(run.output()));
         r.set("expectedOutput", expected);
