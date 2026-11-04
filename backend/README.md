@@ -14,13 +14,13 @@ Owner: Anuj (Team Leader)
 `POST /api/submissions` returning hardcoded sample data, so the frontend can start right away.
 
 ## Run locally
-Add the Spring Boot project here (Spring Initializr: Web, Validation, Spring Data JPA, PostgreSQL Driver), then:
+Needs Java 17+ and a PostgreSQL database. Set these environment variables, then run:
 
 ```
-./mvnw spring-boot:run
+DB_URL=jdbc:postgresql://localhost:5432/mentorlens DB_USER=mentorlens DB_PASSWORD=... JWT_SECRET=<at least 32 random characters> ./mvnw spring-boot:run
 ```
 
-Runs on port 8080. Enable CORS for the frontend early.
+Runs on port 8080. `./mvnw test` needs no database (it uses H2). Enable CORS for the frontend early.
 
 ## Secrets
 Never commit API keys. Put them in environment variables or a local `.env` file (already in `.gitignore`).
