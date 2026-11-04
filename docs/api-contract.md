@@ -49,6 +49,7 @@ Response: HTTP 202
   "error": null,
   "result": {
     "outcome": "NORMAL",
+    "error": null,
     "passed": false,
     "actualOutput": [],
     "expectedOutput": [1, 2],
@@ -75,8 +76,10 @@ Field rules:
 - `outcome` is one of `NORMAL`, `EXCEPTION`, `TIMED_OUT`, `TRUNCATED`, `UNSUPPORTED`. `UNSUPPORTED` means the question type is not supported yet.
 - `score` is a code quality score, a whole number from 0 to 100, or `null` when no checked AI reply is available. It is a guide, not a grade.
 - `line` is the line number in the submitted code.
-- `correctTrace` and `firstDifference` are `null` when no tested correct version is available or the two runs can't be matched.
+- `correctTrace` is `null` when no tested correct version is available. `firstDifference` is `null` in that case, and also when the runs can't be aligned or no difference was found.
+- `result.error` is the error message from the real run of the student's code, such as a crash message, or `null` if there was none. It is separate from the top-level `error`.
 - `explanation` is `null` when the AI is unavailable or its reply is not usable.
+- `noCheckedExplanation` is an extra boolean, present and `true` only when the AI replied but its correct version failed the test. All AI fields are then `null`, and the page should say no checked explanation is available. It is left out otherwise.
 - The correct version is never included in this response.
 
 ### Get the next hint

@@ -25,6 +25,7 @@ public class Submission {
     @Column(columnDefinition = "text") String resultJson;
     @Column(columnDefinition = "text") String hintsJson;
     @Column(columnDefinition = "text") String correctCode; // never returned to the student by GET
+    Instant aiUsedAt; // set when this submission called the AI; drives the daily limit
     @Column(columnDefinition = "text") String error;
     @Column(nullable = false) Instant createdAt = Instant.now();
 
@@ -41,6 +42,7 @@ public class Submission {
 
     public UUID getId() { return id; }
     public SubmissionStatus getStatus() { return status; }
+    public String getQuestion() { return question; }
     public String getCode() { return code; }
     public String getFailingInput() { return failingInput; }
     public String getFailingExpected() { return failingExpected; }
@@ -48,5 +50,6 @@ public class Submission {
     public void setResultJson(String resultJson) { this.resultJson = resultJson; }
     public void setHintsJson(String hintsJson) { this.hintsJson = hintsJson; }
     public void setCorrectCode(String correctCode) { this.correctCode = correctCode; }
+    public void setAiUsedAt(Instant aiUsedAt) { this.aiUsedAt = aiUsedAt; }
     public void setError(String error) { this.error = error; }
 }
