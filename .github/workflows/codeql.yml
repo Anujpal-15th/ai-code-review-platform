@@ -10,7 +10,6 @@ on:
 permissions:
   security-events: write
   contents: read
-  actions: read
 
 jobs:
   analyze:
@@ -24,8 +23,7 @@ jobs:
             build-mode: none
           - language: python
             build-mode: none
-          - language: javascript-typescript
-            build-mode: none
+          # Add javascript-typescript (build-mode: none) when frontend code lands.
     steps:
       - uses: actions/checkout@v4
       - uses: github/codeql-action/init@v3

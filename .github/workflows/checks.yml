@@ -28,20 +28,28 @@ jobs:
   runner-tests:
     name: runner-tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: runner
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          python -m pip install pytest
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
       - name: Run runner tests
         run: |
-          if [ -z "$(find runner/tests -type f \( -name 'test_*.py' -o -name '*_test.py' \) 2>/dev/null)" ]; then
-            echo "No runner tests yet; skipping."
+          # Config comes from runner/pytest.ini. Exit code 5 means no tests were collected.
+          code=0
+          python -m pytest --strict-markers -m "not docker" || code=$?
+          if [ "$code" -eq 5 ]; then
+            echo "No runner tests collected yet; treating as success."
             exit 0
           fi
-          python -m pip install pytest fastapi httpx
-          # "-m 'not docker'" is harmless if the marker is not registered (only a warning).
-          pytest runner/tests -m "not docker"
+          exit "$code"
 
   frontend-tests:
     name: frontend-tests
@@ -52,9 +60,6 @@ jobs:
         with:
           node-version: lts/*
       - name: Run frontend tests
-        run: |
-          if [ -z "$(find frontend/tests -type f \( -name '*.js' -o -name '*.mjs' -o -name '*.cjs' \) 2>/dev/null)" ]; then
-            echo "No frontend tests yet; skipping."
-            exit 0
-          fi
-          node --test frontend/tests/
+        # node --test finds tests itself and exits 0 when there are none.
+        working-directory: frontend
+        run: node --test
