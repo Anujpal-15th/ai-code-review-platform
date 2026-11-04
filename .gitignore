@@ -26,3 +26,6 @@ application-local.properties
 *.iml
 .DS_Store
 Thumbs.db
+
+# Local agent working files (never commit)
+.superpowers/

@@ -53,7 +53,6 @@ Failing test: numbers = [2,7,11,15], target = 9
 
 - **Steps are never invented.** The visualization only shows what really ran.
 - **The correct version is tested first.** If it fails the test, it isn't used for comparison.
-- **AI-written tests are labelled.** They only count once a tested correct version passes them.
 
 ## Architecture
 
