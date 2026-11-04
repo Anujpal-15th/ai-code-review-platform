@@ -1,13 +1,17 @@
 # Backend (Spring Boot)
 
-Owner: Team Leader
+Owner: Anuj (Team Leader)
 
 ## Responsibilities
-- REST API: `POST /api/review`
-- Calls the AI API with a strict-JSON prompt, validates the reply, retries once if invalid
-- Calculates the quality score
-- Saves submissions and reports in PostgreSQL
-- Calls the Python analysis service (Version 2)
+- REST API: see `docs/api-contract.md`
+- Calls the runner for the student's code and the correct version, then finds the first difference between the two runs
+- Calls the AI API with a strict-JSON prompt, validates the reply and retries once if invalid
+- Checks that the AI's correct version passes the failing test before using it
+- Calculates the score
+- Saves submissions and results in PostgreSQL
+
+## Build first
+`POST /api/submissions` returning hardcoded sample data, so the frontend can start right away.
 
 ## Run locally
 Add the Spring Boot project here (Spring Initializr: Web, Validation, Spring Data JPA, PostgreSQL Driver), then:

@@ -1,0 +1,13 @@
+{
+  "question": "Given a sorted array, return the 1-based positions of the two numbers that add up to target.",
+  "failingTest": {
+    "method": "twoSum",
+    "args": { "numbers": [2, 7, 11, 15], "target": 9 },
+    "expected": [1, 2]
+  },
+  "actualOutput": [],
+  "passed": false,
+  "mistakeLine": 9,
+  "mistakeType": "wrong-pointer-moved",
+  "score": 0
+}
