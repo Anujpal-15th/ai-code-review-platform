@@ -50,7 +50,7 @@ public class SubmissionQueue {
                 return;
             }
             pipeline.process(id);
-        } catch (Exception e) {
+        } catch (Throwable e) { // an Error such as StackOverflowError must not leave the row RUNNING
             log.error("Submission {} failed", id, e);
             fail(id, e instanceof PipelineException ? e.getMessage() : "Processing failed unexpectedly");
         }

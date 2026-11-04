@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
     Optional<Submission> findByIdAndUser_Id(UUID id, UUID userId);
 
+    long countByUser_IdAndStatusIn(UUID userId, Collection<SubmissionStatus> statuses);
+
     long countByStatusAndCreatedAtBefore(SubmissionStatus status, Instant createdAt);
 
     @Modifying @Transactional

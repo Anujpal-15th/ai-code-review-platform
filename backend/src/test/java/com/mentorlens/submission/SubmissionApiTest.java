@@ -130,6 +130,82 @@ class SubmissionApiTest {
     }
 
     @Test
+    void errorInWorkerEndsFailedWithGenericMessage() throws Exception {
+        doThrow(new StackOverflowError("secret detail")).when(pipeline).process(any());
+        String token = register("d1@x.com");
+        String id = submit(token);
+        for (int i = 0; i < 50; i++) {
+            String res = mvc.perform(get("/api/submissions/" + id).header("Authorization", token))
+                .andReturn().getResponse().getContentAsString();
+            if (res.contains("\"status\":\"FAILED\"")) {
+                org.assertj.core.api.Assertions.assertThat(res).contains("Processing failed unexpectedly")
+                    .doesNotContain("secret detail");
+                return;
+            }
+            Thread.sleep(100);
+        }
+        throw new AssertionError("never reached FAILED");
+    }
+
+    @Test
+    void validTokenForMissingUserIs401() throws Exception {
+        Instant now = Instant.now();
+        String t = tokenWith(UUID.randomUUID().toString(), now, now.plus(1, ChronoUnit.HOURS));
+        mvc.perform(post("/api/submissions").header("Authorization", "Bearer " + t)
+                .contentType(MediaType.APPLICATION_JSON).content(body("python", "x = 1")))
+            .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    void nulInSubmissionFieldsIs400() throws Exception {
+        String token = register("d2@x.com");
+        String nul = "\\u0000";
+        for (String b : new String[] {
+                body("python", "x" + nul),
+                body("python", "x").replace("Two sum", "Two" + nul),
+                body("python", "x").replace("target = 9", "target" + nul),
+                body("python", "x").replace("[1,2]", "[1" + nul)}) {
+            mvc.perform(post("/api/submissions").header("Authorization", token)
+                    .contentType(MediaType.APPLICATION_JSON).content(b))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").exists());
+        }
+    }
+
+    @Test
+    void fourthActiveSubmissionIs429UntilOneFinishes() throws Exception {
+        String token = register("d3@x.com");
+        Submission one = submissions.findById(UUID.fromString(submit(token))).orElseThrow();
+        submit(token);
+        submit(token); // the mocked pipeline leaves them RUNNING
+        mvc.perform(post("/api/submissions").header("Authorization", token)
+                .contentType(MediaType.APPLICATION_JSON).content(body("python", "x = 1")))
+            .andExpect(status().isTooManyRequests()).andExpect(jsonPath("$.error").exists());
+
+        one.setStatus(SubmissionStatus.DONE);
+        submissions.save(one);
+        submit(token);
+    }
+
+    @Test
+    void parallelSubmitsCannotPassTheLimit() throws Exception {
+        String token = register("d4@x.com");
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(8);
+        try {
+            var calls = new java.util.ArrayList<java.util.concurrent.Callable<Integer>>();
+            for (int i = 0; i < 8; i++) {
+                calls.add(() -> mvc.perform(post("/api/submissions").header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON).content(body("python", "x = 1")))
+                    .andReturn().getResponse().getStatus());
+            }
+            int accepted = 0;
+            for (var f : pool.invokeAll(calls)) if (f.get() == 202) accepted++;
+            org.junit.jupiter.api.Assertions.assertEquals(3, accepted);
+        } finally {
+            pool.shutdown();
+        }
+    }
+
+    @Test
     void malformedIdReturns404WithErrorBody() throws Exception {
         mvc.perform(get("/api/submissions/not-a-uuid").header("Authorization", register("b1@x.com")))
             .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("Submission not found"));

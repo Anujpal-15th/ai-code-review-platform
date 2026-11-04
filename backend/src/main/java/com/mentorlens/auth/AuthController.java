@@ -1,5 +1,6 @@
 package com.mentorlens.auth;
 
+import com.mentorlens.NoNul;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -8,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -27,20 +29,23 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/auth")
 class AuthController {
 
-    record Credentials(@NotBlank @Email @Size(max = 254) String email,
-                       @NotBlank @Size(min = 8, max = 72) String password,
+    record Credentials(@NotBlank @NoNul @Email @Size(max = 254) String email,
+                       @NotBlank @NoNul @Size(min = 8, max = 72) String password,
                        Boolean consent) {}
 
     // login must not apply registration password rules
-    record Login(@NotBlank @Size(max = 254) String email, @NotBlank String password) {}
+    record Login(@NotBlank @NoNul @Size(max = 254) String email, @NotBlank @NoNul String password) {}
 
     private final UserRepository users;
     private final JwtEncoder encoder;
+    private final String allowedDomain; // blank: registration is open
     private final PasswordEncoder hasher = new BCryptPasswordEncoder();
     // checked when the email is unknown, so both login failures cost the same time
     private final String dummyHash = hasher.encode("not-a-real-password");
 
-    AuthController(UserRepository users, JwtEncoder encoder) {
+    AuthController(UserRepository users, JwtEncoder encoder,
+                   @Value("${ALLOWED_EMAIL_DOMAIN:}") String allowedDomain) {
+        this.allowedDomain = allowedDomain.trim().toLowerCase();
         this.users = users;
         this.encoder = encoder;
     }
@@ -54,6 +59,9 @@ class AuthController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "password is too long");
         }
         String email = normalize(c.email());
+        if (!allowedDomain.isEmpty() && !email.substring(email.lastIndexOf('@') + 1).equals(allowedDomain)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email domain is not allowed");
+        }
         if (users.findByEmail(email).isPresent()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already registered");
         }

@@ -29,9 +29,10 @@ public class SubmissionPipeline {
     private static final JsonMapper MAPPER = JsonMapper.builder()
             .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
             .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES).build();
-    // matches quoted strings first, so a True inside a string is left alone
+    // matches quoted strings first, so a True inside a string is left alone.
+    // Possessive on purpose: a backtracking group overflows the stack at about 2000 quoted characters.
     private static final Pattern PYTHON_WORDS = Pattern.compile(
-            "'(?:\\\\.|[^'\\\\])*'|\"(?:\\\\.|[^\"\\\\])*\"|\\b(True|False|None)\\b");
+            "'[^'\\\\]*+(?:\\\\.[^'\\\\]*+)*+'|\"[^\"\\\\]*+(?:\\\\.[^\"\\\\]*+)*+\"|\\b(True|False|None)\\b");
 
     private final SubmissionRepository submissions;
     private final RunnerClient runner;
@@ -96,9 +97,9 @@ public class SubmissionPipeline {
     private static JsonNode parseExpected(String text) {
         try {
             JsonNode node = MAPPER.readTree(fromPython(text));
-            return node.isMissingNode() ? MAPPER.getNodeFactory().stringNode(text) : node;
+            return node.isMissingNode() ? MAPPER.getNodeFactory().stringNode(text.trim()) : node;
         } catch (JacksonException e) {
-            return MAPPER.getNodeFactory().stringNode(text);
+            return MAPPER.getNodeFactory().stringNode(text.trim());
         }
     }
 
@@ -137,7 +138,9 @@ public class SubmissionPipeline {
         r.set("explanation", MAPPER.valueToTree(fb.explanation()));
         r.put("mistakeType", fb.mistakeType());
         r.set("complexity", MAPPER.valueToTree(fb.complexity()));
-        r.put("score", Score.score(fb.issues()));
+        if (!fb.issuesAllDropped()) { // otherwise score stays null: 100 would claim the code had no issues
+            r.put("score", Score.score(fb.issues()));
+        }
         r.set("hint", MAPPER.valueToTree(Map.of("level", 1, "text", fb.hints().get(0))));
     }
 }

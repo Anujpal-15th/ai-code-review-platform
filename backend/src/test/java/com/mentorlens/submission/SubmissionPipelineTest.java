@@ -68,7 +68,7 @@ class SubmissionPipelineTest {
         return new AiFeedback(CORRECT, new AiFeedback.Explanation("w", "wh", "y"),
                 List.of("hint one", "hint two", "hint three"), new AiFeedback.Complexity("O(n)", "O(1)"),
                 "wrong-pointer-moved",
-                List.of(new AiFeedback.Issue(1, "bug", "m"), new AiFeedback.Issue(1, "style", "m")));
+                List.of(new AiFeedback.Issue(1, "bug", "m"), new AiFeedback.Issue(1, "style", "m")), false);
     }
 
     private Submission submit(String expected) {
@@ -458,6 +458,43 @@ class SubmissionPipelineTest {
         queue.enqueue(s.getId());
 
         assertThat(awaitFinished(s.getId()).getStatus()).isEqualTo(SubmissionStatus.FAILED);
+    }
+
+    @Test
+    void longQuotedExpectedTextFinishes() throws Exception {
+        for (String text : List.of("'" + "a".repeat(4998) + "'", "\"" + "\\n".repeat(2499) + "\"")) {
+            when(runner.run(STUDENT, IN)).thenReturn(new RunResult("UNSUPPORTED", null, "", null, List.of()));
+            Submission s = submit(text);
+            queue.enqueue(s.getId());
+            assertThat(awaitFinished(s.getId()).getStatus()).isEqualTo(SubmissionStatus.DONE);
+        }
+    }
+
+    @Test
+    void plainStringExpectedIsTrimmed() {
+        assertThat(passes("\"abc\"", "abc ")).isTrue();
+    }
+
+    private void aiRepliesWith(boolean allDropped) {
+        when(runner.run(STUDENT, IN)).thenReturn(run("NORMAL", "[]", steps(1)));
+        when(runner.run(CORRECT, IN)).thenReturn(run("NORMAL", "[1,2]", steps(0)));
+        when(ai.review(any(), any(), any(), any(), any())).thenReturn(Optional.of(new AiFeedback(CORRECT,
+                new AiFeedback.Explanation("w", "wh", "y"), List.of("a", "b", "c"),
+                new AiFeedback.Complexity("O(n)", "O(1)"), "t", List.of(), allDropped)));
+    }
+
+    @Test
+    void allReportedIssuesDroppedMeansNullScore() {
+        aiRepliesWith(true);
+        JsonNode r = result(process("[1,2]"));
+        assertThat(r.get("score").isNull()).isTrue();
+        assertThat(r.get("explanation").isNull()).isFalse();
+    }
+
+    @Test
+    void emptyIssuesScoresFullMarks() {
+        aiRepliesWith(false);
+        assertThat(result(process("[1,2]")).get("score").asInt()).isEqualTo(100);
     }
 
     private Submission awaitFinished(UUID id) throws InterruptedException {
