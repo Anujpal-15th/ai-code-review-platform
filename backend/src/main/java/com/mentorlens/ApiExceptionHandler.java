@@ -1,12 +1,12 @@
 package com.mentorlens;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
@@ -29,10 +29,10 @@ public class ApiExceptionHandler {
         return of(HttpStatus.BAD_REQUEST, "Request body is missing or malformed");
     }
 
-    // a concurrent duplicate registration hits the unique email constraint
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    ResponseEntity<Error> conflict(DataIntegrityViolationException e) {
-        return of(HttpStatus.BAD_REQUEST, "Email already registered");
+    // a malformed id can never match a submission
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ResponseEntity<Error> badId(MethodArgumentTypeMismatchException e) {
+        return of(HttpStatus.NOT_FOUND, "Submission not found");
     }
 
     @ExceptionHandler(ResponseStatusException.class)

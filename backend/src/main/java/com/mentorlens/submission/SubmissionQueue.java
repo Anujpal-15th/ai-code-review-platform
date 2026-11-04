@@ -38,22 +38,17 @@ public class SubmissionQueue {
 
     @EventListener(ApplicationReadyEvent.class)
     void requeueUnfinished() {
-        for (Submission s : submissions.findByStatusInOrderByCreatedAtAsc(
-                EnumSet.of(SubmissionStatus.QUEUED, SubmissionStatus.RUNNING))) {
-            s.setStatus(SubmissionStatus.QUEUED);
-            submissions.save(s);
-            enqueue(s.getId());
+        submissions.resetRunning();
+        for (Submission s : submissions.findByStatusInOrderByCreatedAtAsc(EnumSet.of(SubmissionStatus.QUEUED))) {
+            enqueue(s.getId()); // a duplicate enqueue is harmless: only one worker wins claim()
         }
     }
 
     private void run(UUID id) {
         try {
-            Submission s = submissions.findById(id).orElse(null);
-            if (s == null || s.getStatus() != SubmissionStatus.QUEUED) {
+            if (submissions.claim(id) != 1) {
                 return;
             }
-            s.setStatus(SubmissionStatus.RUNNING);
-            submissions.save(s);
             pipeline.process(id);
         } catch (Exception e) {
             log.error("Submission {} failed", id, e);

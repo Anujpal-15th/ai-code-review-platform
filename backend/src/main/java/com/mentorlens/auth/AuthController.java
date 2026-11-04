@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,7 +27,11 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/auth")
 class AuthController {
 
-    record Credentials(@NotBlank @Email String email, @NotBlank @Size(min = 8, max = 72) String password) {}
+    record Credentials(@NotBlank @Email @Size(max = 254) String email,
+                       @NotBlank @Size(min = 8, max = 72) String password) {}
+
+    // login must not apply registration password rules
+    record Login(@NotBlank @Size(max = 254) String email, @NotBlank String password) {}
 
     private final UserRepository users;
     private final JwtEncoder encoder;
@@ -48,14 +53,20 @@ class AuthController {
         if (users.findByEmail(email).isPresent()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already registered");
         }
-        User u = users.saveAndFlush(new User(email, hasher.encode(c.password())));
+        User u;
+        try {
+            u = users.saveAndFlush(new User(email, hasher.encode(c.password())));
+        } catch (DataIntegrityViolationException e) { // concurrent duplicate hits the unique constraint
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already registered");
+        }
         return Map.of("token", token(u));
     }
 
     @PostMapping("/login")
-    Map<String, String> login(@Valid @RequestBody Credentials c) {
+    Map<String, String> login(@Valid @RequestBody Login c) {
         User u = users.findByEmail(normalize(c.email())).orElse(null);
-        boolean ok = hasher.matches(c.password(), u == null ? dummyHash : u.passwordHash);
+        boolean ok = c.password().getBytes(StandardCharsets.UTF_8).length <= 72
+            && hasher.matches(c.password(), u == null ? dummyHash : u.passwordHash);
         if (u == null || !ok) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
         }

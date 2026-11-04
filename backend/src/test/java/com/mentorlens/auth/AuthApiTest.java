@@ -37,6 +37,17 @@ class AuthApiTest {
     }
 
     @Test
+    void shortPasswordAtLoginIs401NotValidationError() throws Exception {
+        call("register", "u4@x.com", "password123").andExpect(status().isOk());
+        call("login", "u4@x.com", "short").andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void overlongEmailIs400() throws Exception {
+        call("register", "a".repeat(250) + "@x.com", "password123").andExpect(status().isBadRequest());
+    }
+
+    @Test
     void badLoginIs401WithSameMessage() throws Exception {
         call("register", "u3@x.com", "password123").andExpect(status().isOk());
         String a = call("login", "u3@x.com", "wrongpass1").andExpect(status().isUnauthorized())
