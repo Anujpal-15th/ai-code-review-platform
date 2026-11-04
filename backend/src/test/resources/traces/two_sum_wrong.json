@@ -1,0 +1,354 @@
+[
+ {
+  "step": 1,
+  "line": 2,
+  "event": "call",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9
+  }
+ },
+ {
+  "step": 2,
+  "line": 3,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9
+  }
+ },
+ {
+  "step": 3,
+  "line": 4,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 0,
+   "right": 3
+  }
+ },
+ {
+  "step": 4,
+  "line": 5,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 0,
+   "right": 3
+  }
+ },
+ {
+  "step": 5,
+  "line": 6,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 0,
+   "right": 3,
+   "total": 17
+  }
+ },
+ {
+  "step": 6,
+  "line": 8,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 0,
+   "right": 3,
+   "total": 17
+  }
+ },
+ {
+  "step": 7,
+  "line": 9,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 0,
+   "right": 3,
+   "total": 17
+  }
+ },
+ {
+  "step": 8,
+  "line": 4,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 1,
+   "right": 3,
+   "total": 17
+  }
+ },
+ {
+  "step": 9,
+  "line": 5,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 1,
+   "right": 3,
+   "total": 17
+  }
+ },
+ {
+  "step": 10,
+  "line": 6,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 1,
+   "right": 3,
+   "total": 22
+  }
+ },
+ {
+  "step": 11,
+  "line": 8,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 1,
+   "right": 3,
+   "total": 22
+  }
+ },
+ {
+  "step": 12,
+  "line": 9,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 1,
+   "right": 3,
+   "total": 22
+  }
+ },
+ {
+  "step": 13,
+  "line": 4,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 2,
+   "right": 3,
+   "total": 22
+  }
+ },
+ {
+  "step": 14,
+  "line": 5,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 2,
+   "right": 3,
+   "total": 22
+  }
+ },
+ {
+  "step": 15,
+  "line": 6,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 2,
+   "right": 3,
+   "total": 26
+  }
+ },
+ {
+  "step": 16,
+  "line": 8,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 2,
+   "right": 3,
+   "total": 26
+  }
+ },
+ {
+  "step": 17,
+  "line": 9,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 2,
+   "right": 3,
+   "total": 26
+  }
+ },
+ {
+  "step": 18,
+  "line": 4,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 3,
+   "right": 3,
+   "total": 26
+  }
+ },
+ {
+  "step": 19,
+  "line": 12,
+  "event": "line",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 3,
+   "right": 3,
+   "total": 26
+  }
+ },
+ {
+  "step": 20,
+  "line": 12,
+  "event": "return",
+  "function": "twoSum",
+  "variables": {
+   "numbers": [
+    2,
+    7,
+    11,
+    15
+   ],
+   "target": 9,
+   "left": 3,
+   "right": 3,
+   "total": 26
+  }
+ }
+]
