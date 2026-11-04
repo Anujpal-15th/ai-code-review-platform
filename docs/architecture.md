@@ -84,7 +84,7 @@ flowchart TD
 - Steps always come from real execution, never from the AI.
 - The AI's correct version must pass the failing test before it is used.
 - The AI is asked for a correct version that keeps the student's approach, so the two runs can be compared. If they still can't be matched, show only where the output goes wrong.
-- An AI-written test only counts towards the score if a tested correct version passes it.
+- Pass or fail comes only from the real run on the student's test. The AI never decides it.
 
 ## Sandbox
 Each run uses a fresh container with no network, a time limit, a memory limit, a read-only file system except for a temporary directory, and a non-root user. Runs go through a queue with a limit on how many run at once, so a whole lab can submit together.
@@ -92,13 +92,13 @@ Each run uses a fresh container with no network, a time limit, a memory limit, a
 ## Score
 
 ```
-Score = round( (p / N) x (60 + 0.4 x Q) )
 Q = max( 0, 100 - sum(weight x count) )
 ```
 
-- `p` is the number of tests passed out of `N` counted tests.
-- `Q` is code quality, and bugs weigh more than style problems.
-- Code that fails every counted test scores 0, however clean it looks.
+- The score is `Q`, a code quality score out of 100, and is a guide, not a grade.
+- It comes from AI-reported quality issues. Bugs weigh more than style problems.
+- Pass or fail is shown separately and comes only from the real run.
+- With no checked AI reply, there is no score, so `score` is `null`.
 - The weights will be tuned during testing.
 
 ## Who owns what
