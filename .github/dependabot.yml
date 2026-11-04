@@ -1,0 +1,11 @@
+version: 2
+updates:
+  # Add pip (/runner) and npm (/frontend) entries when their manifests land.
+  - package-ecosystem: maven
+    directory: /backend
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

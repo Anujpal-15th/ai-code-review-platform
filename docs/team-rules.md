@@ -26,3 +26,10 @@ Then open a pull request on GitHub and fill in the template.
 - Is the pull request small and focused on one task?
 - Did the author touch only their own files?
 - Say one good thing before asking for changes.
+
+## Automatic checks
+Every pull request to `main` runs `backend-tests`, `runner-tests` and `frontend-tests`
+(plus CodeQL code scanning). A pull request must pass these checks before it is merged.
+If a check fails, fix it in your branch and push again.
+Docker sandbox tests (marked `docker`) do not run in the automatic checks. Run them by hand
+before merging any runner change.
