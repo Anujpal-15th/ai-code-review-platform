@@ -59,7 +59,7 @@ class SubmissionApiTest {
 
     String register(String email) throws Exception {
         String res = mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"" + email + "\",\"password\":\"password123\"}"))
+                .content("{\"email\":\"" + email + "\",\"password\":\"password123\",\"consent\":true}"))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         Matcher m = Pattern.compile("\"token\":\"([^\"]+)\"").matcher(res);
         m.find();

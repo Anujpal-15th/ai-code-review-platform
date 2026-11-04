@@ -30,6 +30,11 @@ public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
         + " and o.user.id = (select s.user.id from Submission s where s.id = :id)")
     long countAiUsesBySameStudent(UUID id, Instant since);
 
+    /** True when this submission's student is in the explanation-only pilot group; unset counts as step-based. */
+    @Query("select count(s) > 0 from Submission s where s.id = :id"
+        + " and s.user.pilotGroup = com.mentorlens.auth.PilotGroup.EXPLANATION_ONLY")
+    boolean isExplanationOnly(UUID id);
+
     /** One atomic step up; the row lock also makes concurrent callers take turns. Stops at the last level. */
     @Modifying(clearAutomatically = true) @Transactional
     @Query("update Submission s set s.hintLevel = s.hintLevel + 1 where s.id = :id and s.hintLevel < :max")

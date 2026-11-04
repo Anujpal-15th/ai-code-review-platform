@@ -62,6 +62,10 @@ public class SubmissionPipeline {
                 RunResult correct = run(fb.correctCode(), input);
                 if (isCorrect(correct, expected)) {
                     addFeedback(result, fb, run, correct);
+                    if (submissions.isExplanationOnly(id)) { // pilot: no correct run or first difference
+                        result.putNull("correctTrace");
+                        result.putNull("firstDifference");
+                    }
                     s.setCorrectCode(fb.correctCode());
                     s.setHintsJson(MAPPER.writeValueAsString(fb.hints()));
                     s.setHintLevel(1); // the result already shows hint 1
