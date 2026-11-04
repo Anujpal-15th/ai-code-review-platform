@@ -2,6 +2,7 @@
 -- Groups: STEP_BASED (step comparison + AI explanation) or EXPLANATION_ONLY (AI explanation alone).
 -- A student with no group (NULL) is treated as STEP_BASED.
 -- The group is not exposed by any API, so students cannot choose or see it.
+-- Run this before the student starts: results already saved do not change when the group changes.
 -- Replace the placeholders before running; email is stored lower-case.
 
 UPDATE users

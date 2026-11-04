@@ -31,17 +31,16 @@ public class AiFeedbackParser {
             }
             List<AiFeedback.Issue> issues = new ArrayList<>();
             JsonNode in = root.get("issues");
-            if (in != null && in.isArray()) {
-                for (JsonNode i : in) {
-                    String type = str(i.get("type")), msg = str(i.get("message"));
-                    JsonNode line = i.get("line");
-                    if (line == null || !line.isInt() || line.asInt() < 1 || line.asInt() > codeLines || msg == null) continue;
-                    if (!"bug".equals(type) && !"style".equals(type)) continue;
-                    issues.add(new AiFeedback.Issue(line.asInt(), type, msg));
-                }
+            if (in == null || !in.isArray()) return Optional.empty();
+            for (JsonNode i : in) {
+                String type = str(i.get("type")), msg = str(i.get("message"));
+                JsonNode line = i.get("line");
+                if (line == null || !line.isInt() || line.asInt() < 1 || line.asInt() > codeLines || msg == null) continue;
+                if (!"bug".equals(type) && !"style".equals(type)) continue;
+                issues.add(new AiFeedback.Issue(line.asInt(), type, msg));
             }
             return Optional.of(new AiFeedback(correctCode, new AiFeedback.Explanation(what, where, why), hints,
-                    new AiFeedback.Complexity(time, space), mistakeType, issues));
+                    new AiFeedback.Complexity(time, space), mistakeType, issues, !in.isEmpty() && issues.isEmpty()));
         } catch (RuntimeException e) {
             return Optional.empty();
         }
@@ -52,8 +51,9 @@ public class AiFeedbackParser {
         return false;
     }
 
-    /** Non-blank text value, else null. */
+    /** Non-blank text value, else null. NUL makes the whole reply invalid: PostgreSQL text cannot store it. */
     private static String str(JsonNode n) {
+        if (n != null && n.isString() && n.asString().indexOf('\0') >= 0) throw new IllegalArgumentException("NUL");
         return n != null && n.isString() && !n.asString().isBlank() ? n.asString() : null;
     }
 
