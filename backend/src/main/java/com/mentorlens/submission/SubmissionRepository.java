@@ -25,5 +25,10 @@ public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
         + " where s.status = com.mentorlens.submission.SubmissionStatus.RUNNING")
     int resetRunning();
 
+    /** AI uses since the given time by this submission's student, not counting this one (it may be a restart). */
+    @Query("select count(o) from Submission o where o.aiUsedAt >= :since and o.id <> :id"
+        + " and o.user.id = (select s.user.id from Submission s where s.id = :id)")
+    long countAiUsesBySameStudent(UUID id, Instant since);
+
     List<Submission> findByStatusInOrderByCreatedAtAsc(Collection<SubmissionStatus> statuses);
 }

@@ -77,6 +77,7 @@ Field rules:
 - `line` is the line number in the submitted code.
 - `correctTrace` and `firstDifference` are `null` when no tested correct version is available or the two runs can't be matched.
 - `explanation` is `null` when the AI is unavailable or its reply is not usable.
+- `noCheckedExplanation` is an extra boolean, present and `true` only when the AI replied but its correct version failed the test. All AI fields are then `null`, and the page should say no checked explanation is available. It is left out otherwise.
 - The correct version is never included in this response.
 
 ### Get the next hint
