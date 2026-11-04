@@ -15,7 +15,7 @@ class AiFeedbackParserTest {
 
     @Test
     void validJsonParses() {
-        var fb = AiFeedbackParser.parse(VALID).orElseThrow();
+        var fb = AiFeedbackParser.parse(VALID, 10).orElseThrow();
         assertThat(fb.hints()).containsExactly("a", "b", "c");
         assertThat(fb.explanation().why()).isEqualTo("y");
         assertThat(fb.complexity().time()).isEqualTo("O(n)");
@@ -24,40 +24,47 @@ class AiFeedbackParserTest {
 
     @Test
     void fencedJsonParses() {
-        assertThat(AiFeedbackParser.parse("```json\n" + VALID + "\n```")).isPresent();
+        assertThat(AiFeedbackParser.parse("```json\n" + VALID + "\n```", 10)).isPresent();
     }
 
     @Test
     void missingHintsRejected() {
-        assertThat(AiFeedbackParser.parse(VALID.replace("\"hints\":[\"a\",\"b\",\"c\"]", "\"hints\":[\"a\",\"b\"]"))).isEmpty();
-        assertThat(AiFeedbackParser.parse(VALID.replace("\"hints\":[\"a\",\"b\",\"c\"],", ""))).isEmpty();
-        assertThat(AiFeedbackParser.parse(VALID.replace("[\"a\",\"b\",\"c\"]", "[\"a\",\" \",\"c\"]"))).isEmpty();
+        assertThat(AiFeedbackParser.parse(VALID.replace("\"hints\":[\"a\",\"b\",\"c\"]", "\"hints\":[\"a\",\"b\"]"), 10)).isEmpty();
+        assertThat(AiFeedbackParser.parse(VALID.replace("\"hints\":[\"a\",\"b\",\"c\"],", ""), 10)).isEmpty();
+        assertThat(AiFeedbackParser.parse(VALID.replace("[\"a\",\"b\",\"c\"]", "[\"a\",\" \",\"c\"]"), 10)).isEmpty();
     }
 
     @Test
     void blankRequiredFieldsRejected() {
-        assertThat(AiFeedbackParser.parse(VALID.replace("\"mistakeType\":\"off-by-one\"", "\"mistakeType\":\"\""))).isEmpty();
-        assertThat(AiFeedbackParser.parse(VALID.replace("\"space\":\"O(1)\"", "\"space\":\" \""))).isEmpty();
-        assertThat(AiFeedbackParser.parse(VALID.replace("\"where\":\"x\"", "\"where\":null"))).isEmpty();
+        assertThat(AiFeedbackParser.parse(VALID.replace("\"mistakeType\":\"off-by-one\"", "\"mistakeType\":\"\""), 10)).isEmpty();
+        assertThat(AiFeedbackParser.parse(VALID.replace("\"space\":\"O(1)\"", "\"space\":\" \""), 10)).isEmpty();
+        assertThat(AiFeedbackParser.parse(VALID.replace("\"where\":\"x\"", "\"where\":null"), 10)).isEmpty();
     }
 
     @Test
     void issueOnMissingLineDropped() {
         String json = VALID.replace("\"issues\":[{\"line\":2,\"type\":\"bug\",\"message\":\"m\"}]",
                 "\"issues\":[{\"type\":\"bug\",\"message\":\"no line\"},{\"line\":3,\"type\":\"style\",\"message\":\"ok\"}]");
-        var fb = AiFeedbackParser.parse(json).orElseThrow();
+        var fb = AiFeedbackParser.parse(json, 10).orElseThrow();
         assertThat(fb.issues()).extracting(AiFeedback.Issue::line).containsExactly(3);
+    }
+
+    @Test
+    void issueBeyondCodeEndDropped() {
+        // VALID has an issue on line 2
+        assertThat(AiFeedbackParser.parse(VALID, 2).orElseThrow().issues()).hasSize(1);
+        assertThat(AiFeedbackParser.parse(VALID, 1).orElseThrow().issues()).isEmpty();
     }
 
     @Test
     void issueWithUnknownTypeDropped() {
         String json = VALID.replace("\"type\":\"bug\"", "\"type\":\"security\"");
-        assertThat(AiFeedbackParser.parse(json).orElseThrow().issues()).isEmpty();
+        assertThat(AiFeedbackParser.parse(json, 10).orElseThrow().issues()).isEmpty();
     }
 
     @Test
     void garbageReturnsEmpty() {
-        assertThat(AiFeedbackParser.parse("not json")).isEmpty();
-        assertThat(AiFeedbackParser.parse(null)).isEmpty();
+        assertThat(AiFeedbackParser.parse("not json", 10)).isEmpty();
+        assertThat(AiFeedbackParser.parse(null, 10)).isEmpty();
     }
 }

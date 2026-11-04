@@ -9,18 +9,24 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.JsonNode;
 
 @Component
 public class GeminiAiClient implements AiClient {
     static final int MAX_STEPS = 40;
-    static final int MAX_TEXT = 2000;
+    /** Cap on run-derived sections only; question, code and test text are never truncated. */
+    static final int MAX_RUN_TEXT = 2000;
+    static final int MAX_OUTPUT_TOKENS = 16384;
+    private static final Logger log = LoggerFactory.getLogger(GeminiAiClient.class);
     private static final String URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent";
     private static final String INSTRUCTIONS = load();
 
@@ -50,26 +56,33 @@ public class GeminiAiClient implements AiClient {
     @Override
     public Optional<AiFeedback> review(String question, String code, String inputText, String expectedText,
                                        RunResult run) {
-        if (apiKey == null || apiKey.isBlank()) return Optional.empty();
-        String prompt = buildPrompt(question, code, inputText, expectedText, run);
-        // one retry, only on an invalid reply; an API failure returns empty at once
-        for (int attempt = 0; attempt < 2; attempt++) {
-            String text;
-            try {
-                text = call(prompt);
-            } catch (RuntimeException e) {
-                return Optional.empty(); // message may echo the request, so it is not logged
-            }
-            Optional<AiFeedback> fb = AiFeedbackParser.parse(text);
-            if (fb.isPresent()) return fb;
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("AI_API_KEY is not set; AI feedback disabled");
+            return Optional.empty();
         }
+        // one retry, only on an invalid reply; an API failure returns empty at once
+        try {
+            String prompt = buildPrompt(question, code, inputText, expectedText, run);
+            int lines = (int) code.lines().count();
+            for (int attempt = 0; attempt < 2; attempt++) {
+                Optional<AiFeedback> fb = AiFeedbackParser.parse(call(prompt), lines);
+                if (fb.isPresent()) return fb;
+            }
+        } catch (RuntimeException e) {
+            // never log the message, body, prompt or key
+            String why = e instanceof RestClientResponseException r
+                    ? "HTTP " + r.getStatusCode().value() : e.getClass().getSimpleName();
+            log.warn("AI call failed ({}), model {}", why, model);
+            return Optional.empty();
+        }
+        log.warn("AI reply invalid after retry, model {}", model);
         return Optional.empty();
     }
 
     private String call(String prompt) {
         Map<String, Object> body = Map.of(
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
-                "generationConfig", Map.of("responseMimeType", "application/json"));
+                "generationConfig", Map.of("responseMimeType", "application/json", "maxOutputTokens", MAX_OUTPUT_TOKENS));
         JsonNode resp = http.post().uri(URL.formatted(model))
                 .header("x-goog-api-key", apiKey)
                 .body(body)
@@ -84,13 +97,13 @@ public class GeminiAiClient implements AiClient {
     /** Instructions first, then untrusted material only inside delimited data sections. */
     static String buildPrompt(String question, String code, String inputText, String expectedText, RunResult run) {
         StringBuilder sb = new StringBuilder(INSTRUCTIONS).append('\n');
-        section(sb, "QUESTION", question);
-        section(sb, "STUDENT_CODE", code);
-        section(sb, "TEST_INPUT", inputText);
-        section(sb, "EXPECTED_OUTPUT", expectedText);
-        section(sb, "RUN_OUTCOME", run.outcome());
-        section(sb, "RUN_OUTPUT", String.valueOf(run.output()));
-        section(sb, "RUN_ERROR", run.error());
+        section(sb, "QUESTION", question, false);
+        section(sb, "STUDENT_CODE", code, false);
+        section(sb, "TEST_INPUT", inputText, false);
+        section(sb, "EXPECTED_OUTPUT", expectedText, false);
+        section(sb, "RUN_OUTCOME", run.outcome(), true);
+        section(sb, "RUN_OUTPUT", String.valueOf(run.output()), true);
+        section(sb, "RUN_ERROR", run.error(), true);
         List<Step> steps = run.steps() == null ? List.of() : run.steps();
         StringBuilder t = new StringBuilder();
         for (Step s : steps.subList(0, Math.min(steps.size(), MAX_STEPS))) {
@@ -98,15 +111,15 @@ public class GeminiAiClient implements AiClient {
                     .append(s.variables()).append('\n');
         }
         if (steps.size() > MAX_STEPS) t.append("... ").append(steps.size() - MAX_STEPS).append(" more steps omitted\n");
-        section(sb, "RUN_TRACE", t.toString());
+        section(sb, "RUN_TRACE", t.toString(), true);
         return sb.toString();
     }
 
-    private static void section(StringBuilder sb, String name, String text) {
+    private static void section(StringBuilder sb, String name, String text, boolean cap) {
         String s = text == null ? "" : text;
-        if (s.length() > MAX_TEXT) s = s.substring(0, MAX_TEXT) + "...[truncated]";
+        if (cap && s.length() > MAX_RUN_TEXT) s = s.substring(0, MAX_RUN_TEXT) + "...[truncated]";
         // stop untrusted text from forging a delimiter
-        s = s.replace("<<<", "< < <").replace(">>>", "> > >");
+        s = s.replaceAll("<{3,}", "< < <").replaceAll(">{3,}", "> > >");
         sb.append("<<<").append(name).append(">>>\n").append(s).append("\n<<<END_").append(name).append(">>>\n");
     }
 

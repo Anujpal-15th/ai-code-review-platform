@@ -10,7 +10,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class AiFeedbackParser {
     private static final JsonMapper MAPPER = new JsonMapper();
 
-    public static Optional<AiFeedback> parse(String text) {
+    public static Optional<AiFeedback> parse(String text, int codeLines) {
         if (text == null) return Optional.empty();
         try {
             JsonNode root = MAPPER.readTree(stripFence(text.trim()));
@@ -35,7 +35,7 @@ public class AiFeedbackParser {
                 for (JsonNode i : in) {
                     String type = str(i.get("type")), msg = str(i.get("message"));
                     JsonNode line = i.get("line");
-                    if (line == null || !line.isInt() || line.asInt() < 1 || msg == null) continue;
+                    if (line == null || !line.isInt() || line.asInt() < 1 || line.asInt() > codeLines || msg == null) continue;
                     if (!"bug".equals(type) && !"style".equals(type)) continue;
                     issues.add(new AiFeedback.Issue(line.asInt(), type, msg));
                 }
