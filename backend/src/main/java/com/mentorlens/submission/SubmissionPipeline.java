@@ -64,6 +64,7 @@ public class SubmissionPipeline {
                     addFeedback(result, fb, run, correct);
                     s.setCorrectCode(fb.correctCode());
                     s.setHintsJson(MAPPER.writeValueAsString(fb.hints()));
+                    s.setHintLevel(1); // the result already shows hint 1
                 } else {
                     result.put("noCheckedExplanation", true);
                 }

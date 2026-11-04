@@ -25,6 +25,7 @@ public class Submission {
     @Column(columnDefinition = "text") String resultJson;
     @Column(columnDefinition = "text") String hintsJson;
     @Column(columnDefinition = "text") String correctCode; // never returned to the student by GET
+    Integer hintLevel; // hint level last shown; null means no checked AI reply (and old rows)
     Instant aiUsedAt; // set when this submission called the AI; drives the daily limit
     @Column(columnDefinition = "text") String error;
     @Column(nullable = false) Instant createdAt = Instant.now();
@@ -50,6 +51,7 @@ public class Submission {
     public void setResultJson(String resultJson) { this.resultJson = resultJson; }
     public void setHintsJson(String hintsJson) { this.hintsJson = hintsJson; }
     public void setCorrectCode(String correctCode) { this.correctCode = correctCode; }
+    public void setHintLevel(Integer hintLevel) { this.hintLevel = hintLevel; }
     public void setAiUsedAt(Instant aiUsedAt) { this.aiUsedAt = aiUsedAt; }
     public void setError(String error) { this.error = error; }
 }
