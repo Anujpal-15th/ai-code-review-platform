@@ -1,0 +1,60 @@
+name: Checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    name: backend-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Run backend tests
+        working-directory: backend
+        run: ./mvnw -B test
+
+  runner-tests:
+    name: runner-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run runner tests
+        run: |
+          if [ -z "$(find runner/tests -type f \( -name 'test_*.py' -o -name '*_test.py' \) 2>/dev/null)" ]; then
+            echo "No runner tests yet; skipping."
+            exit 0
+          fi
+          python -m pip install pytest fastapi httpx
+          # "-m 'not docker'" is harmless if the marker is not registered (only a warning).
+          pytest runner/tests -m "not docker"
+
+  frontend-tests:
+    name: frontend-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Run frontend tests
+        run: |
+          if [ -z "$(find frontend/tests -type f \( -name '*.js' -o -name '*.mjs' -o -name '*.cjs' \) 2>/dev/null)" ]; then
+            echo "No frontend tests yet; skipping."
+            exit 0
+          fi
+          node --test frontend/tests/
