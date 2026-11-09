@@ -11,11 +11,15 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+@ExtendWith(OutputCaptureExtension.class)
 class HttpRunnerClientTest {
     private final RestClient.Builder builder = RestClient.builder();
     private final MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
@@ -71,5 +75,45 @@ class HttpRunnerClientTest {
         server.expect(requestTo("http://runner:8000/run"))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
         assertThatThrownBy(() -> client.run("c", "i")).isInstanceOf(RuntimeException.class);
+    }
+
+    private static String reply(String line) {
+        return "{\"outcome\":\"NORMAL\",\"steps\":[{\"step\":1,\"line\":" + line
+                + ",\"event\":\"call\",\"function\":\"f\",\"variables\":{}}]}";
+    }
+
+    @Test
+    void unparsableReplyLogsParseFailureWithoutBody(CapturedOutput out) {
+        for (String line : new String[] {"\"BODYSECRET\"", "null"}) {
+            RestClient.Builder b = RestClient.builder();
+            MockRestServiceServer s = MockRestServiceServer.bindTo(b).build();
+            s.expect(requestTo("http://runner:8000/run")).andRespond(withSuccess(reply(line), MediaType.APPLICATION_JSON));
+            assertThatThrownBy(() -> new HttpRunnerClient(b.build(), "http://runner:8000").run("c", "i"))
+                    .isInstanceOf(RuntimeException.class)
+                    .satisfies(e -> assertThat(e.toString() + e.getCause()).doesNotContain("BODYSECRET"));
+        }
+        assertThat(out.getAll()).contains("Runner reply could not be parsed")
+                .doesNotContain("BODYSECRET").doesNotContain("Runner connection failed");
+    }
+
+    @Test
+    void stepWithoutLineThrows() {
+        server.expect(requestTo("http://runner:8000/run")).andRespond(withSuccess(
+                "{\"outcome\":\"NORMAL\",\"steps\":[{\"step\":1,\"event\":\"call\"}]}", MediaType.APPLICATION_JSON));
+        assertThatThrownBy(() -> client.run("c", "i")).isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void connectionFailureLogsDistinctly(CapturedOutput out) {
+        server.expect(requestTo("http://runner:8000/run")).andRespond(withException(new IOException("refused")));
+        assertThatThrownBy(() -> client.run("c", "i")).isInstanceOf(RuntimeException.class);
+        assertThat(out.getAll()).contains("Runner connection failed").doesNotContain("could not be parsed");
+    }
+
+    @Test
+    void httpErrorBodyIsNotKeptInTheException() {
+        server.expect(requestTo("http://runner:8000/run")).andRespond(withServerError().body("BODYSECRET"));
+        assertThatThrownBy(() -> client.run("c", "i"))
+                .satisfies(e -> assertThat(e.toString() + e.getCause()).doesNotContain("BODYSECRET"));
     }
 }

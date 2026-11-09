@@ -62,6 +62,39 @@ class AiFeedbackParserTest {
         assertThat(AiFeedbackParser.parse(json, 10).orElseThrow().issues()).isEmpty();
     }
 
+    private static final String ISSUES = "\"issues\":[{\"line\":2,\"type\":\"bug\",\"message\":\"m\"}]";
+
+    @Test
+    void missingOrNonArrayIssuesRejected() {
+        assertThat(AiFeedbackParser.parse(VALID.replace(ISSUES, "\"x\":1"), 10)).isEmpty();
+        assertThat(AiFeedbackParser.parse(VALID.replace(ISSUES, "\"issues\":null"), 10)).isEmpty();
+        assertThat(AiFeedbackParser.parse(VALID.replace(ISSUES, "\"issues\":\"none\""), 10)).isEmpty();
+    }
+
+    @Test
+    void emptyIssuesIsValidAndNotDropped() {
+        var fb = AiFeedbackParser.parse(VALID.replace(ISSUES, "\"issues\":[]"), 10).orElseThrow();
+        assertThat(fb.issues()).isEmpty();
+        assertThat(fb.issuesAllDropped()).isFalse();
+    }
+
+    @Test
+    void allIssuesDroppedIsFlaggedButSomeDroppedIsNot() {
+        assertThat(AiFeedbackParser.parse(VALID, 1).orElseThrow().issuesAllDropped()).isTrue();
+        String mixed = VALID.replace("\"issues\":[", "\"issues\":[{\"line\":99,\"type\":\"bug\",\"message\":\"x\"},");
+        assertThat(AiFeedbackParser.parse(mixed, 10).orElseThrow().issuesAllDropped()).isFalse();
+    }
+
+    @Test
+    void nulInAnyAiTextRejected() {
+        String nul = "\\u0000";
+        assertThat(AiFeedbackParser.parse(VALID.replace("def f(): pass", "def f():" + nul), 10)).isEmpty();
+        assertThat(AiFeedbackParser.parse(VALID.replace("\"what\":\"w\"", "\"what\":\"w" + nul + "\""), 10)).isEmpty();
+        assertThat(AiFeedbackParser.parse(VALID.replace("\"a\"", "\"a" + nul + "\""), 10)).isEmpty();
+        assertThat(AiFeedbackParser.parse(VALID.replace("off-by-one", "off" + nul), 10)).isEmpty();
+        assertThat(AiFeedbackParser.parse(VALID.replace("\"message\":\"m\"", "\"message\":\"m" + nul + "\""), 10)).isEmpty();
+    }
+
     @Test
     void garbageReturnsEmpty() {
         assertThat(AiFeedbackParser.parse("not json", 10)).isEmpty();

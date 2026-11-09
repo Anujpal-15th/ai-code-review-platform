@@ -44,6 +44,13 @@ sequenceDiagram
     participant DB as Database
     S->>F: Paste question, code, failing test
     F->>B: POST /api/submissions
+    B->>DB: Save as QUEUED
+    B-->>F: 202 with the submission id
+    loop Until DONE or FAILED
+        F->>B: GET /api/submissions/{id}
+        B-->>F: Status and queue position
+    end
+    Note over B: A backend worker picks up the submission
     B->>R: Run student code on the test
     R-->>B: Output and steps
     B->>AI: Question, code, test, real result
@@ -51,12 +58,18 @@ sequenceDiagram
     B->>R: Run correct version on the same test
     R-->>B: Output and steps
     B->>B: Find first difference, calculate score
-    B->>DB: Save result and hints
+    B->>DB: Save result and hints, mark DONE
+    F->>B: GET /api/submissions/{id}
     B-->>F: Result with hint level 1
     F-->>S: Replay and explanation
 ```
 
-Later hints are served from the database with no new AI call.
+Submitting and checking are separate calls, so a student waits on the page without holding a request open. Later hints are served from the database with no new AI call.
+
+## Queues and limits
+- The backend queues submissions. Rows with status `QUEUED` in the database are the queue, and 4 backend workers take them oldest first. Unfinished rows are picked up again after a restart.
+- The runner limits containers. It decides how many sandboxes run at once and makes extra `/run` calls wait.
+- One student can have at most 3 submissions `QUEUED` or `RUNNING`.
 
 ## Backend flow
 
@@ -64,7 +77,8 @@ Later hints are served from the database with no new AI call.
 flowchart TD
     A[Receive request] --> B{Valid input?}
     B -- No --> C[Return error 400]
-    B -- Yes --> D[Run student code]
+    B -- Yes --> Q[Save as QUEUED and return 202]
+    Q --> D[Worker runs student code]
     D --> E[Call AI]
     E --> F{Valid JSON?}
     F -- No --> G[Retry once]
@@ -77,7 +91,7 @@ flowchart TD
     K -- Yes --> M[Find first difference]
     L --> N[Calculate score and save]
     M --> N
-    N --> O[Return result]
+    N --> O[Mark DONE, result available to the check call]
 ```
 
 ## Rules that keep it honest
@@ -87,7 +101,7 @@ flowchart TD
 - Pass or fail comes only from the real run on the student's test. The AI never decides it.
 
 ## Sandbox
-Each run uses a fresh container with no network, a time limit, a memory limit, a read-only file system except for a temporary directory, and a non-root user. Runs go through a queue with a limit on how many run at once, so a whole lab can submit together.
+Each run uses a fresh container with no network, a time limit, a memory limit, a read-only file system except for a temporary directory, and a non-root user. The runner limits how many run at once, and the backend's queue holds the rest, so a whole lab can submit together.
 
 ## Score
 
@@ -99,13 +113,14 @@ Q = max( 0, 100 - sum(weight x count) )
 - It comes from AI-reported quality issues. Bugs weigh more than style problems.
 - Pass or fail is shown separately and comes only from the real run.
 - With no checked AI reply, there is no score, so `score` is `null`.
+- If the AI reported issues and none of them could be used, `score` is also `null`. An empty `issues` list is valid and scores 100.
 - The weights will be tuned during testing.
 
 ## Who owns what
 | Part | Owner |
 | --- | --- |
-| Backend, AI feedback, comparison, score, database | Anuj |
-| Runner, sandbox, queue | Aryan |
+| Backend, submission queue, AI feedback, comparison, score, database | Anuj |
+| Runner, sandbox, limit on running containers | Aryan |
 | Workspace and visualization | Abhi |
 | Dashboard, sample dataset, documentation | Rudra |
 

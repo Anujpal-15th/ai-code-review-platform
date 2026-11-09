@@ -12,6 +12,8 @@ Request (login): `{ "email": "a@b.com", "password": "..." }`
 
 Request (register): `{ "email": "a@b.com", "password": "...", "consent": true }`. `consent` must be `true` (the student agreed to the pilot terms). If it is missing or `false`, the response is HTTP 400 with `{ "error": "message" }` and no account is created.
 
+When the server sets `ALLOWED_EMAIL_DOMAIN`, register also returns HTTP 400 with `{ "error": "message" }` for an email at any other domain.
+
 Response (both): `{ "token": "..." }`. Send it on later calls as `Authorization: Bearer <token>`.
 
 ### Submit code
@@ -76,7 +78,7 @@ Field rules:
 - `status` is one of `QUEUED`, `RUNNING`, `DONE`, `FAILED`. `result` is `null` until `DONE`. `queuePosition` is `0` once it is no longer waiting.
 - `error` is `null` unless `status` is `FAILED`, when it is a message string.
 - `outcome` is one of `NORMAL`, `EXCEPTION`, `TIMED_OUT`, `TRUNCATED`, `UNSUPPORTED`. `UNSUPPORTED` means the question type is not supported yet.
-- `score` is a code quality score, a whole number from 0 to 100, or `null` when no checked AI reply is available. It is a guide, not a grade.
+- `score` is a code quality score, a whole number from 0 to 100. It is `null` when no checked AI reply is available, or when the AI reported issues and none could be used. It is a guide, not a grade.
 - `line` is the line number in the submitted code.
 - `correctTrace` is `null` when no tested correct version is available. `firstDifference` is `null` in that case, and also when the runs can't be aligned or no difference was found.
 - Pilot: for students in the explanation-only group, `correctTrace` and `firstDifference` are always `null`, even when a tested correct version exists. Everything else (the student's own trace, `explanation`, `score`, hints, and the level 4 correct code) is unchanged. The page must treat these two as "not shown" and must not infer from them that no checked explanation is available. The group is set by admins and is not exposed by any API.
@@ -95,7 +97,13 @@ Field rules:
 
 Levels: 1 nudge, 2 pointer, 3 guided fix, 4 correct version. `correctCode` is only filled in at level 4.
 
+The result already shows level 1, so the first call returns level 2. Each call moves one level on. Once at level 4, further calls repeat level 4.
+
+Returns HTTP 404 with `{ "error": "message" }` when the submission does not exist, belongs to another student, is not `DONE`, or has no checked AI reply.
+
 ### Get progress
+
+**Not built yet (Task 15).** The format below is the agreed plan.
 
 `GET /api/students/me/progress`
 
@@ -112,9 +120,15 @@ Levels: 1 nudge, 2 pointer, 3 guided fix, 4 correct version. `correctCode` is on
 
 | Case | Response |
 | --- | --- |
-| Invalid input, such as empty code or an unknown language | HTTP 400 with `{ "error": "message" }` |
+| Invalid input, such as empty code, an unknown language, a NUL character in a text field, or a malformed body | HTTP 400 with `{ "error": "message" }` |
 | No token, or an invalid one | HTTP 401 with `{ "error": "message" }` |
+| Valid token for a user that does not exist | `POST /api/submissions`: HTTP 401 with `{ "error": "message" }`. `GET` on a submission or its hints: HTTP 404 with `{ "error": "message" }` |
 | Submission id does not exist or belongs to another student | HTTP 404 with `{ "error": "message" }` |
+| Wrong HTTP method | HTTP 405 with `{ "error": "message" }` |
+| Request body over 256 KB | HTTP 413 with `{ "error": "message" }` |
+| `Content-Type` is not JSON | HTTP 415 with `{ "error": "message" }` |
+| A student already has 3 submissions `QUEUED` or `RUNNING`, or too many requests to `/api/auth/**` from one address | HTTP 429 with `{ "error": "message" }` |
+| Unexpected server error | HTTP 500 with `{ "error": "message" }` |
 | The runner failed while processing | The check call returns `status` `FAILED` with `error` set. Not an HTTP error. |
 | Only the AI failed | The real result and trace, with `explanation` set to `null` |
 
@@ -161,3 +175,7 @@ Response:
 `outcome` is one of `NORMAL`, `EXCEPTION`, `TIMED_OUT`, `TRUNCATED`, `UNSUPPORTED`.
 
 `event` is one of `call`, `line`, `return`.
+
+Every step's `line` must be sent as an integer. A reply with a missing, null or non-numeric `line` cannot be parsed, and the submission ends as `FAILED`.
+
+`variables` must not include `self` or memory addresses (such as `<Foo object at 0x7f...>`). They differ between runs and would show up as false differences.

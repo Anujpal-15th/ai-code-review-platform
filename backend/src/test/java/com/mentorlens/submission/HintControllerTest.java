@@ -223,7 +223,7 @@ class HintControllerTest {
         when(ai.review(any(), any(), any(), any(), any())).thenAnswer(inv -> Optional.of(new AiFeedback(
             SECRET, new AiFeedback.Explanation("w", "wh", "y"), List.of("hint one", "hint two", "hint three"),
             new AiFeedback.Complexity("O(n)", "O(1)"), "wrong-pointer-moved",
-            List.of(new AiFeedback.Issue(1, "bug", "m")))));
+            List.of(new AiFeedback.Issue(1, "bug", "m")), false)));
         when(runner.run(SECRET, IN)).thenReturn(run("[1,2]", 0));
 
         pipeline.process(s.getId());
